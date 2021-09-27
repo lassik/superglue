@@ -96,14 +96,16 @@
 
 (define ff-module-name (make-parameter #f))
 
+(define c-mangle (mangle-ascii "-" "_"))
+
 (define (emit-c-type x)
-  (values))
+  (disp "struct ff_" (c-mangle (ff-module-name))
+        "_" (c-mangle (ff-type-name x)) ";"))
 
 (define (emit-c-constant x)
   (values))
 
 (define (emit-c-procedure x)
-  (define mangle (mangle-ascii "-" "_"))
   (define mapping
     '((string "const char *")
       (symbol "const char *")
@@ -121,14 +123,15 @@
             (let ((entry (assq t mapping)))
               (cond (entry
                      (string-append (second entry) addition
-                                    (mangle name)))
+                                    (c-mangle name)))
                     ((symbol? t)
-                     (string-append "struct ff_" (mangle t)
-                                    " *" addition (mangle name)))
+                     (string-append "struct ff_" (c-mangle (ff-module-name))
+                                    "_" (c-mangle t)
+                                    " *" addition (c-mangle name)))
                     (else
                      (error "Foo" t))))))))
   (disp "struct ff_error *"
-        "ff_" (mangle (ff-module-name)) "_" (mangle (ff-proc-name x))
+        "ff_" (c-mangle (ff-module-name)) "_" (c-mangle (ff-proc-name x))
         "("
         (string-join (append
                       (map (c-name-type->string "")
@@ -138,6 +141,8 @@
                      ", ")
         ");"))
 
+(define sml-mangle (mangle-ascii "-" "_"))
+
 (define (emit-sml-type x)
   (values))
 
@@ -145,14 +150,14 @@
   (values))
 
 (define (emit-sml-procedure x)
-  (define mangle (mangle-ascii "-" "_"))
   (define (sml-type->string t)
     (cond ((and (list? t) (= 2 (length t)) (eq? 'list (first t)))
            (string-append (sml-type->string (second t)) " list"))
           ((memq t '(string symbol nat int real bool))
-           (mangle t))
+           (sml-mangle t))
           ((symbol? t)
-           (string-append "ff." (mangle (ff-module-name)) "." (mangle t)))
+           (string-append
+            "ff." (sml-mangle (ff-module-name)) "." (sml-mangle t)))
           (else
            (error "Foo" t))))
   (define (sml-tuple->string tuple)
@@ -163,7 +168,7 @@
         (else (string-join tuple " * ")))))
   (define (sml-result-tuple->string tuple)
     (string-append (sml-tuple->string tuple) " ff.result"))
-  (disp "val " (mangle (ff-proc-name x)) " : "
+  (disp "val " (sml-mangle (ff-proc-name x)) " : "
         (sml-tuple->string (ff-proc-tuple-in  x)) " -> "
         (sml-result-tuple->string (ff-proc-tuple-out x)) ";"))
 
