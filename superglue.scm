@@ -1,12 +1,8 @@
 #!
 
 (import (scheme base) (scheme file) (scheme read) (scheme write)
-        (srfi 193))
+        (srfi 1) (srfi 193))
 
-(define first car)
-(define second cadr)
-(define (third x) (list-ref x 2))
-(define (fourth x) (list-ref x 3))
 (define rest cdr)
 
 (define-record-type ff-type
@@ -96,7 +92,13 @@
 
 (define ff-module-name (make-parameter #f))
 
+;;
+
 (define c-mangle (mangle-ascii "-" "_"))
+
+(define (emit-c-header)
+  (disp "/*! Generator: superglue */")
+  (disp))
 
 (define (emit-c-type x)
   (disp "struct ff_" (c-mangle (ff-module-name))
@@ -141,7 +143,13 @@
                      ", ")
         ");"))
 
+;;
+
 (define sml-mangle (mangle-ascii "-" "_"))
+
+(define (emit-sml-header)
+  (disp "(*! Generator: superglue *)")
+  (disp))
 
 (define (emit-sml-type x)
   (values))
@@ -174,17 +182,20 @@
 
 (define make-emitter list)
 (define emitter-name first)
-(define emitter-emit-type second)
-(define emitter-emit-constant third)
-(define emitter-emit-procedure fourth)
+(define emitter-emit-header second)
+(define emitter-emit-type third)
+(define emitter-emit-constant fourth)
+(define emitter-emit-procedure fifth)
 (define (emitter-by-name name) (assoc name emitters))
 
 (define emitters
   (list (make-emitter 'c
+                      emit-c-header
                       emit-c-type
                       emit-c-constant
                       emit-c-procedure)
         (make-emitter 'sml
+                      emit-sml-header
                       emit-sml-type
                       emit-sml-constant
                       emit-sml-procedure)))
@@ -226,6 +237,7 @@
                        (parsed (map parse (with-input-from-file pose
                                             read-all))))
                   (parameterize ((ff-module-name module))
+                    ((emitter-emit-header emitter))
                     (for-each (lambda (x) (emit emitter x))
                               parsed))))
               modules)))
